@@ -1,44 +1,90 @@
 <template>
     <div class="todo-container">
-        <h1 class="todo-title">周先生TO-DO LIST</h1>
+        <h1 class="todo-title">TO-DO LIST</h1>
         <div class="todo-input-group">
             <input type="text" placeholder="Add a task" class="todo-input" v-model="inputText" />
             <button class="todo-add-button" @click="addTask">＋</button>
         </div>
-        <ul class="todo-list">
-            <li class="todo-item"><input type="checkbox" /> <span>Task 1 暴富</span></li>
-            <li class="todo-item"><input type="checkbox" /> <span>Task 2 娶美女</span></li>
-            <li class="todo-item"><input type="checkbox" /> <span>Task 3 生100胎</span></li>
+        <ul class="todo-list" v-for="task in filteredTodos" :key="task.id">
+            <li class="todo-item">
+                <label class="checkbox">
+                    <input type="checkbox" />
+                    {{ task.text }}
+                </label>
+
+                <button class="closeBtn" v-show="filter === 'pending'" @click="finishTask(task.id)">X</button>
+            </li>
         </ul>
         <footer>
-            <div class="total">剩余任务：6</div>
+            <div class="total">未完成任务：{{ pendingCount }}</div>
             <div class="buttonGroup">
-                <button class="toDoTask activeBtn">待完成</button>
-                <button class="completed">已完成</button>
-                <button class="allTask">全部</button>
+                <button @click="toDoTask" :class="{ activeBtn: filter === 'pending' }">待完成</button>
+                <button @click="completedTask" :class="{ activeBtn: filter === 'completed' }">已完成</button>
+                <button @click="AllTask" :class="{ activeBtn: filter === 'all' }">全部</button>
             </div>
         </footer>
     </div>
-
 </template>
 
 
 <script setup lang="ts">
-import { ref ,computed} from 'vue';
+import { reactive, ref, computed } from 'vue';
 const inputText = ref('');
-const todoLists=ref<{text:string;status:boolean}[]>([]);
-const addTask=()=>{
-   const text=inputText.value.trim();
-    if(text){
+const todoLists = ref<{
+    id: number;
+    text: string;
+    status: boolean
+}[]>([]);
+
+const addTask = () => {
+    const text = inputText.value.trim();
+    if (text) {
         todoLists.value.push(
             {
+                id: Date.now(),
                 text,
-                false
+                status: false
             }
         );
         inputText.value = ''         // 清空输入框
     }
 }
+//在待办删除转移到完成
+const finishTask = (id: number) => {
+    const task = todoLists.value.find(t => t.id === id)
+    if (task) {
+        task.status = true
+    }
+
+}
+//切换按钮改状态
+const filter = ref<'all' | 'pending' | 'completed'>('pending');
+const toDoTask = () => {
+    filter.value = "pending"
+
+}
+const completedTask = () => {
+    filter.value = "completed"
+}
+const AllTask = () => {
+    filter.value = "all"
+}
+//根据状态切换视图
+const filteredTodos = computed(() => {
+    if (filter.value === 'pending') {
+        return todoLists.value.filter(task => task.status === false)
+    } else if (filter.value === 'completed') {
+        return todoLists.value.filter(task => task.status === true)
+    } else {
+        return todoLists.value
+    }
+})
+//统计没有完成的
+const pendingCount = computed(() => {
+   return todoLists.value.filter(task => task.status === false).length
+
+}
+)
 </script>
 
 <style>
@@ -47,13 +93,13 @@ body {
     background-color: #FFEEE2;
     display: flex;
     justify-content: center;
-    padding: 50px;
+    padding: 20px;
     font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
 
 }
 
 .todo-container {
-    width: 380px;
+    width: 440px;
     padding: 30px 20px;
     background: #fff8f0;
     border: 12px solid #ffccaa;
@@ -73,6 +119,7 @@ body {
     margin-bottom: 20px;
     border: 3px solid #FEDEB8;
     border-radius: 100px;
+    background-color: #fff;
 }
 
 .todo-input {
@@ -81,7 +128,6 @@ body {
     border: none;
     border-radius: 30px 0 0 30px;
     font-size: 16px;
-    background-color: #fff;
     outline: none;
 
 }
@@ -117,7 +163,24 @@ body {
     gap: 10px;
     font-size: 16px;
     color: #444;
-    /* border: 1px solid #f0c0c0; */
+    justify-content: space-between;
+
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.closeBtn {
+    width: 30px;
+    height: 30px;
+    text-align: center;
+    line-height: 20px;
+    background-color: #f0e6df;
+    color: #ffffff;
+    padding: 2px;
 }
 
 footer {
