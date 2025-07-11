@@ -2,8 +2,8 @@
     <div class="todo-container">
         <h1 class="todo-title">周先生TO-DO LIST</h1>
         <div class="todo-input-group">
-            <input type="text" placeholder="Add a task" class="todo-input" />
-            <button class="todo-add-button">＋</button>
+            <input type="text" placeholder="Add a task" class="todo-input" v-model="inputText" />
+            <button class="todo-add-button" @click="addTask">＋</button>
         </div>
         <ul class="todo-list">
             <li class="todo-item"><input type="checkbox" /> <span>Task 1 暴富</span></li>
@@ -24,7 +24,21 @@
 
 
 <script setup lang="ts">
-
+import { ref ,computed} from 'vue';
+const inputText = ref('');
+const todoLists=ref<{text:string;status:boolean}[]>([]);
+const addTask=()=>{
+   const text=inputText.value.trim();
+    if(text){
+        todoLists.value.push(
+            {
+                text,
+                false
+            }
+        );
+        inputText.value = ''         // 清空输入框
+    }
+}
 </script>
 
 <style>
@@ -43,7 +57,7 @@ body {
     padding: 30px 20px;
     background: #fff8f0;
     border: 12px solid #ffccaa;
-    border-radius:48px;
+    border-radius: 48px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
@@ -105,55 +119,59 @@ body {
     color: #444;
     /* border: 1px solid #f0c0c0; */
 }
-footer{
+
+footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-top: 20px;
 }
+
 input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  width: 20px;
-  height: 20px;
-  border: 2px solid #DCC5A2;
-  border-radius: 4px;
-  background-color: white;
-  cursor: pointer;
-  position: relative;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #DCC5A2;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    position: relative;
 }
 
 /* 选中状态：背景和边框变色 */
 input[type="checkbox"]:checked {
-  background-color: #ee5628;
-  border-color: #ee5628;
+    background-color: #ee5628;
+    border-color: #ee5628;
 }
 
 /* 对勾 ✔️ */
 input[type="checkbox"]:checked::after {
-  content: '';
-  position: absolute;
-  top: 1px;
-  left: 4px;
-  width: 6px;
-  height: 10px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-  box-sizing: content-box;
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 4px;
+    width: 6px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    box-sizing: content-box;
 }
 
-button{
+button {
     background-color: #FCCFB6;
     color: white;
     border-radius: 32px;
     margin-left: 10px;
-    padding: 10px 20px; /* 上下10px，左右20px */
-  font-size: 14px;    /* 文字大小也会影响视觉尺寸 */
-}
-.activeBtn{
-    background-color: #E3663D;
+    padding: 10px 20px;
+    /* 上下10px，左右20px */
+    font-size: 14px;
+    /* 文字大小也会影响视觉尺寸 */
 }
 
+.activeBtn {
+    background-color: #E3663D;
+}
 </style>
