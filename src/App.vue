@@ -5,22 +5,29 @@
             <input type="text" placeholder="Add a task" class="todo-input" v-model="inputText" />
             <button class="todo-add-button" @click="addTask">＋</button>
         </div>
+        <button v-show="pendingCount >= 1 && filter === 'pending'" class="multipleFinishTask"
+            @click="multipleFinishTask">批量完成</button>
         <ul class="todo-list" v-for="task in filteredTodos" :key="task.id">
             <li class="todo-item">
                 <label class="checkbox">
-                    <input type="checkbox" />
+                    <input v-show="filter === 'pending'" type="checkbox" v-model="selectedIds" :value="task.id">
                     {{ task.text }}
                 </label>
 
-                <button class="closeBtn" v-show="filter === 'pending'" @click="finishTask(task.id)">X</button>
+                <button title="点击标记为完成" class="closeBtn" v-show="filter === 'pending'" @click="finishTask(task.id)">X</button>
             </li>
         </ul>
-        <footer>
-            <div class="total">未完成任务：{{ pendingCount }}</div>
+        <footer v-show="pendingCount >= 1">
+            <div class="total">
+                <span v-if="filter === 'pending'">未完成任务：{{ pendingCount }} </span>
+                <span v-else-if="filter === 'completed'">已完成任务：{{ finishCount }} </span>
+                <span v-else="filter==='all'">全部任务：{{ AllCount }}</span>
+            </div>
             <div class="buttonGroup">
-                <button @click="toDoTask" :class="{ activeBtn: filter === 'pending' }">待完成</button>
-                <button @click="completedTask" :class="{ activeBtn: filter === 'completed' }">已完成</button>
-                <button @click="AllTask" :class="{ activeBtn: filter === 'all' }">全部</button>
+                <button class="bottomButton" @click="toDoTask" :class="{ activeBtn: filter === 'pending' }">待完成</button>
+                <button class="bottomButton" @click="completedTask"
+                    :class="{ activeBtn: filter === 'completed' }">已完成</button>
+                <button class="bottomButton" @click="AllTask" :class="{ activeBtn: filter === 'all' }">全部</button>
             </div>
         </footer>
     </div>
@@ -28,7 +35,7 @@
 
 
 <script setup lang="ts">
-import { reactive, ref, computed } from 'vue';
+import { ref, computed } from 'vue';
 const inputText = ref('');
 const todoLists = ref<{
     id: number;
@@ -81,10 +88,35 @@ const filteredTodos = computed(() => {
 })
 //统计没有完成的
 const pendingCount = computed(() => {
-   return todoLists.value.filter(task => task.status === false).length
-
+    return todoLists.value.filter(task => task.status === false).length
 }
 )
+//全部
+const AllCount = computed(() =>
+    todoLists.value.length
+
+)
+//完成的
+const finishCount = computed(() => {
+    return todoLists.value.filter(task => task.status === true).length
+}
+)
+//多选完成
+const selectedIds = ref<number[]>([]);
+const multipleFinishTask = () => {
+    if (selectedIds.value.length > 0) {
+        todoLists.value.forEach(task => {
+            if (selectedIds.value.includes(task.id)) {
+                task.status = true
+            }
+        })
+    }else{
+        alert("你玩呢")
+    }
+
+    // 可选：清空选中项
+    selectedIds.value = []
+}
 </script>
 
 <style>
@@ -223,7 +255,7 @@ input[type="checkbox"]:checked::after {
     box-sizing: content-box;
 }
 
-button {
+.bottomButton {
     background-color: #FCCFB6;
     color: white;
     border-radius: 32px;
@@ -236,5 +268,16 @@ button {
 
 .activeBtn {
     background-color: #E3663D;
+}
+
+.multipleFinishTask {
+    margin-bottom: 10px;
+    text-align: left;
+    display: block;
+    border: 1px solid #ff9980;
+    border-radius: 50px;
+    background-color: #ffedeb;
+    font-size: 14px;
+    color: #ff9980;
 }
 </style>
