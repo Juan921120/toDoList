@@ -5,19 +5,39 @@
             <input type="text" placeholder="Add a task" class="todo-input" v-model="inputText" />
             <button class="todo-add-button" @click="addTask">＋</button>
         </div>
-        <button v-show="pendingCount >= 1 && filter === 'pending'" class="multipleFinishTask"
-            @click="multipleFinishTask">批量完成</button>
-        <ul class="todo-list" v-for="task in filteredTodos" :key="task.id">
-            <li class="todo-item">
-                <label class="checkbox">
-                    <input v-show="filter === 'pending'" type="checkbox" v-model="selectedIds" :value="task.id">
-                    {{ task.text }}
-                </label>
+        <div v-show="pendingCount >= 1 && filter === 'pending'" class="multipleChange">
+            <label class="checkbox">
+                <input type="checkbox" @click="allCheck" :checked="allChecked" />
+                全选
+            </label>
+            <button class="multipleFinishTask" @click="multipleFinishTask">批量完成
+            </button>
+        </div>
 
-                <button title="点击标记为完成" class="closeBtn" v-show="filter === 'pending'" @click="finishTask(task.id)">X</button>
-            </li>
-        </ul>
-        <footer v-show="pendingCount >= 1">
+        <div class="emptyState" v-if="
+            (filter === 'pending' && pendingCount === 0) ||
+            (filter === 'completed' && finishCount === 0) ||
+            (filter === 'all' && AllCount === 0)">
+            <img src="/images/empty-state.png" class="catImg" alt="暂无待办">
+            <div> 没有任务哦～</div>
+        </div>
+
+        <div v-else>
+            <ul class="todo-list" v-for="task in filteredTodos" :key="task.id">
+                <li class="todo-item">
+                    <label class="checkbox">
+                        <input v-show="filter === 'pending'" type="checkbox" v-model="selectedIds" :value="task.id">
+                        {{ task.text }}
+                    </label>
+
+                    <button title="点击标记为完成" class="closeBtn" v-show="filter === 'pending'"
+                        @click="finishTask(task.id)">X</button>
+                </li>
+            </ul>
+        </div>
+
+
+        <footer>
             <div class="total">
                 <span v-if="filter === 'pending'">未完成任务：{{ pendingCount }} </span>
                 <span v-else-if="filter === 'completed'">已完成任务：{{ finishCount }} </span>
@@ -110,12 +130,28 @@ const multipleFinishTask = () => {
                 task.status = true
             }
         })
-    }else{
+    } else {
         alert("你玩呢")
     }
 
     // 可选：清空选中项
     selectedIds.value = []
+}
+//全选
+const allChecked = ref(false);//默认不选
+const allCheck = () => {
+    allChecked.value = !allChecked.value;
+    if (
+        allChecked.value//选了
+    ) {
+        selectedIds.value = todoLists
+            .value.filter(t => t.status === false)
+            .map(t => t.id)
+        console.log(selectedIds.value)
+    } else {
+        selectedIds.value = []  //清空
+    }
+
 }
 </script>
 
@@ -205,6 +241,15 @@ body {
     gap: 8px;
 }
 
+.multipleChange {
+    display: flex;
+    justify-content: space-between;
+}
+
+.multipleChange .checkbox {
+    margin-left: 15px;
+}
+
 .closeBtn {
     width: 30px;
     height: 30px;
@@ -219,7 +264,7 @@ footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 20px;
+    margin-top: 30px;
 }
 
 input[type="checkbox"] {
@@ -279,5 +324,37 @@ input[type="checkbox"]:checked::after {
     background-color: #ffedeb;
     font-size: 14px;
     color: #ff9980;
+}
+
+.catImg {
+    width: 20%;
+    display: block;
+    margin: 0 auto;
+
+}
+
+@media screen and (max-width: 600px) {
+    .todo-container {
+        width: 98%;
+        padding: 15px;
+        font-size: 14px;
+        margin: 0 auto;
+    }
+
+    .todo-title {
+        font-size: 18px;
+        text-align: center;
+    }
+
+    .todo-input {
+        font-size: 14px;
+        padding: 8px;
+    }
+
+    .checkbox {
+        text-align: left;
+        width: 70%;
+    }
+
 }
 </style>
