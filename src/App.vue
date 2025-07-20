@@ -14,16 +14,15 @@
             </button>
         </div>
 
-        <div class="emptyState" v-if="
-            (filter === 'pending' && pendingCount === 0) ||
+        <div class="emptyState" v-if="(filter === 'pending' && pendingCount === 0) ||
             (filter === 'completed' && finishCount === 0) ||
-            (filter === 'all' && AllCount === 0)">
+            (filter === 'all' && allCount === 0)">
             <img src="/images/empty-state.png" class="catImg" alt="暂无待办">
             <div> 没有任务哦～</div>
         </div>
 
         <div v-else>
-            <ul class="todo-list" v-for="task in filteredTodos" :key="task.id">
+            <ul class="todo-list" v-for="task in todoLists" :key="task.id">
                 <li class="todo-item">
                     <label class="checkbox">
                         <input v-show="filter === 'pending'" type="checkbox" v-model="selectedIds" :value="task.id">
@@ -41,7 +40,7 @@
             <div class="total">
                 <span v-if="filter === 'pending'">未完成任务：{{ pendingCount }} </span>
                 <span v-else-if="filter === 'completed'">已完成任务：{{ finishCount }} </span>
-                <span v-else="filter==='all'">全部任务：{{ AllCount }}</span>
+                <span v-else="filter==='all'">全部任务：{{ allCount }}</span>
             </div>
             <div class="buttonGroup">
                 <button class="bottomButton" @click="toDoTask" :class="{ activeBtn: filter === 'pending' }">待完成</button>
@@ -55,7 +54,8 @@
 
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import axios from "axios";
+import { ref, onMounted } from 'vue';
 const inputText = ref('');
 const todoLists = ref<{
     id: number;
@@ -63,75 +63,82 @@ const todoLists = ref<{
     status: boolean
 }[]>([]);
 
-const addTask = () => {
+const addTask = async () => {
     const text = inputText.value.trim();
-    if (text) {
-        todoLists.value.push(
-            {
-                id: Date.now(),
-                text,
-                status: false
-            }
-        );
-        inputText.value = ''         // 清空输入框
-    }
-}
+    if (!text) return;
+
+    const newTask = {
+        text,
+        status: false
+    };
+    await axios.post('/task', newTask);
+    inputText.value = '';
+    loadTasks(); // 刷新任务
+    loadStats();
+};
+
 //在待办删除转移到完成
-const finishTask = (id: number) => {
-    const task = todoLists.value.find(t => t.id === id)
-    if (task) {
-        task.status = true
-    }
+const finishTask = async (id: number) => {
+    await axios.put(`/task/complete/${id}`);
+    loadTasks();
+    loadStats();
 
 }
 //切换按钮改状态
 const filter = ref<'all' | 'pending' | 'completed'>('pending');
 const toDoTask = () => {
     filter.value = "pending"
-
+    loadTasks();
+    loadStats();
 }
 const completedTask = () => {
     filter.value = "completed"
+    loadTasks();
+    loadStats();
 }
 const AllTask = () => {
     filter.value = "all"
+    loadTasks();
+    loadStats();
 }
-//根据状态切换视图
-const filteredTodos = computed(() => {
-    if (filter.value === 'pending') {
-        return todoLists.value.filter(task => task.status === false)
-    } else if (filter.value === 'completed') {
-        return todoLists.value.filter(task => task.status === true)
-    } else {
-        return todoLists.value
-    }
-})
-//统计没有完成的
-const pendingCount = computed(() => {
-    return todoLists.value.filter(task => task.status === false).length
-}
-)
-//全部
-const AllCount = computed(() =>
-    todoLists.value.length
+//页面加载
+onMounted(() => {
+    loadTasks();
+    loadStats();
+});
 
-)
-//完成的
-const finishCount = computed(() => {
-    return todoLists.value.filter(task => task.status === true).length
-}
-)
+//根据状态切换视图
+const loadTasks = async () => {
+    let url = '/task';
+    if (filter.value === 'pending') url = '/task/pending';
+    if (filter.value === 'completed') url = '/task/completed';
+if (filter.value === 'all') url = '/task/all';
+    const response = await axios.get(url);
+    todoLists.value = response.data;
+};
+
+//统计
+const pendingCount = ref(0);
+const finishCount = ref(0);
+const allCount = ref(0);
+const loadStats = async () => {
+    const res = await axios.get('/task/count');
+    pendingCount.value = res.data.pendingCount;
+    finishCount.value = res.data.finishCount;
+    allCount.value = res.data.allCount;
+};
+
 //多选完成
 const selectedIds = ref<number[]>([]);
-const multipleFinishTask = () => {
+const multipleFinishTask = async () => {
     if (selectedIds.value.length > 0) {
-        todoLists.value.forEach(task => {
-            if (selectedIds.value.includes(task.id)) {
-                task.status = true
-            }
-        })
+        await axios.put('/task/complete/batch', selectedIds.value);
+        selectedIds.value = [];
+        allChecked.value = false;
+        loadTasks();
+        loadStats();
     } else {
-        alert("你玩呢")
+        alert("你玩呢f")
     }
 
     // 可选：清空选中项
@@ -153,6 +160,10 @@ const allCheck = () => {
     }
 
 }
+
+
+
+
 </script>
 
 <style>
@@ -233,12 +244,14 @@ body {
     color: #444;
     justify-content: space-between;
 
+
 }
 
 .checkbox {
     display: flex;
     align-items: center;
     gap: 8px;
+    text-align: left;
 }
 
 .multipleChange {
@@ -284,6 +297,8 @@ input[type="checkbox"] {
 input[type="checkbox"]:checked {
     background-color: #ee5628;
     border-color: #ee5628;
+    width: 20px;
+    height: 20px;
 }
 
 /* 对勾 ✔️ */
@@ -335,8 +350,7 @@ input[type="checkbox"]:checked::after {
 
 @media screen and (max-width: 600px) {
     .todo-container {
-        width: 98%;
-        padding: 15px;
+        width: 290px;
         font-size: 14px;
         margin: 0 auto;
     }
@@ -351,10 +365,26 @@ input[type="checkbox"]:checked::after {
         padding: 8px;
     }
 
-    .checkbox {
-        text-align: left;
-        width: 70%;
+
+
+    footer {
+        flex-direction: column;
     }
+
+    .buttonGroup {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .buttonGroup button {
+        margin-top: 6px;
+    }
+
+    .todo-input {
+        padding-left: 10px;
+    }
+
+
 
 }
 </style>
