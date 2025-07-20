@@ -7,13 +7,17 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     host: '0.0.0.0',
-    port: 5173 // 或你用的其他端口
-    ,
+    port: 5173, // 或你用的其他端口
     proxy: {
-      '/task': {
-        target: 'http://localhost:8080', // 你的 Spring Boot 后端地址
-        changeOrigin: true
+      // 仅把 /api 开头的请求代理给后端
+      '^/api/.*': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        // 可选：去掉 /api 前缀
+        rewrite: path => path.replace(/^\/api/, ''),
       }
     }
-  }
+  },
+
 })
+

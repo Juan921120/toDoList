@@ -1,142 +1,164 @@
 <template>
-    <div class="todo-container">
-        <h1 class="todo-title">TO-DO LIST</h1>
-        <div class="todo-input-group">
-            <input type="text" placeholder="Add a task" class="todo-input" v-model="inputText" />
-            <button class="todo-add-button" @click="addTask">＋</button>
-        </div>
-        <div v-show="pendingCount >= 1 && filter === 'pending'" class="multipleChange">
-            <label class="checkbox">
-                <input type="checkbox" @click="allCheck" :checked="allChecked" />
-                全选
-            </label>
-            <button class="multipleFinishTask" @click="multipleFinishTask">批量完成
-            </button>
-        </div>
-
-        <div class="emptyState" v-if="(filter === 'pending' && pendingCount === 0) ||
-            (filter === 'completed' && finishCount === 0) ||
-            (filter === 'all' && allCount === 0)">
-            <img src="/images/empty-state.png" class="catImg" alt="暂无待办">
-            <div> 没有任务哦～</div>
-        </div>
-
-        <div v-else>
-            <ul class="todo-list" v-for="task in todoLists" :key="task.id">
-                <li class="todo-item">
-                    <label class="checkbox">
-                        <input v-show="filter === 'pending'" type="checkbox" v-model="selectedIds" :value="task.id">
-                        {{ task.text }}
-                    </label>
-
-                    <button title="点击标记为完成" class="closeBtn" v-show="filter === 'pending'"
-                        @click="finishTask(task.id)">X</button>
-                </li>
-            </ul>
-        </div>
-
-
-        <footer>
-            <div class="total">
-                <span v-if="filter === 'pending'">未完成任务：{{ pendingCount }} </span>
-                <span v-else-if="filter === 'completed'">已完成任务：{{ finishCount }} </span>
-                <span v-else="filter==='all'">全部任务：{{ allCount }}</span>
+    <div class="jagged-wrapper">
+        <div class="todo-container your-content">
+            <h1 class="todo-title">TO-DO LIST</h1>
+            <div class="todo-input-group">
+                <input type="text" placeholder="Add a task" class="todo-input" v-model="inputText" />
+                <button class="todo-add-button" @click="addTask">＋</button>
             </div>
-            <div class="buttonGroup">
-                <button class="bottomButton" @click="toDoTask" :class="{ activeBtn: filter === 'pending' }">待完成</button>
-                <button class="bottomButton" @click="completedTask"
-                    :class="{ activeBtn: filter === 'completed' }">已完成</button>
-                <button class="bottomButton" @click="AllTask" :class="{ activeBtn: filter === 'all' }">全部</button>
+            <div v-show="pendingCount >= 1 && filter === 'pending'" class="multipleChange">
+                <label class="checkbox">
+                    <input type="checkbox" @click="allCheck" :checked="allChecked" />
+                    全选
+                </label>
+                <button class="multipleFinishTask" @click="multipleFinishTask">批量完成
+                </button>
             </div>
-        </footer>
+            <!-- 空状态 -->
+            <div class="emptyState" v-if="
+                (filter === 'pending' && pendingCount === 0) ||
+                (filter === 'completed' && finishCount === 0) ||
+                (filter === 'all' && allCount === 0)">
+                <img src="/images/empty-state.png" class="catImg" alt="暂无待办">
+                <div> 没有任务哦～</div>
+            </div>
+
+            <div v-else>
+                <ul class="todo-list">
+                    <li class="todo-item" v-for="task in todoLists" :key="task.id">
+                        <label class="checkbox">
+                            <input v-show="filter === 'pending'" type="checkbox" v-model="selectedIds" :value="task.id">
+                            {{ task.text }}
+                        </label>
+
+                        <button title="点击标记为完成" class="closeBtn" v-show="filter === 'pending'"
+                            @click="finishTask(task.id)">X</button>
+                    </li>
+                </ul>
+            </div>
+
+
+            <footer>
+                <div class="total">
+                    <span v-if="filter === 'pending'">未完成任务：{{ pendingCount }} </span>
+                    <span v-else-if="filter === 'completed'">已完成任务：{{ finishCount }} </span>
+                    <span v-else>全部任务：{{ allCount }}</span>
+                </div>
+                <div class="buttonGroup">
+                    <button class="bottomButton" @click="toDoTask"
+                        :class="{ activeBtn: filter === 'pending' }">待完成</button>
+                    <button class="bottomButton" @click="completedTask"
+                        :class="{ activeBtn: filter === 'completed' }">已完成</button>
+                    <button class="bottomButton" @click="AllTask" :class="{ activeBtn: filter === 'all' }">全部</button>
+                </div>
+            </footer>
+        </div>
     </div>
 </template>
 
 
 <script setup lang="ts">
-import axios from "axios";
 import { ref, onMounted } from 'vue';
-const inputText = ref('');
+import axios from 'axios';
+
+
+//渲染页面
 const todoLists = ref<{
     id: number;
     text: string;
     status: boolean
 }[]>([]);
 
+const loadList = async () => {
+    let res;
+    switch (filter.value) {
+        case 'all':
+            res = await axios.get("/api/task/all")
+            break
+        case 'completed':
+            res = await axios.get("/api/task/completed")
+            break
+        case 'pending':
+            res = await axios.get("/api/task/pending")
+            break
+    }
+    todoLists.value = res.data;
+    console.log('API 返回：', res)      // ← 加这一行
+}
+//统计任务数
+const pendingCount = ref(0)
+const finishCount = ref(0)
+const allCount = ref(0)
+const total = async () => {
+    try {
+        const res = await axios.get("/api/task/count")
+        pendingCount.value = res.data.pending
+        finishCount.value = res.data.completed
+        allCount.value = res.data.total
+    } catch (err) {
+        console.log("失败")
+
+    }
+}
+onMounted(() => {
+    loadList()
+    total()
+});
+
+
+//加记录
+const inputText = ref('');
 const addTask = async () => {
     const text = inputText.value.trim();
-    if (!text) return;
-
-    const newTask = {
-        text,
-        status: false
-    };
-    await axios.post('/task', newTask);
-    inputText.value = '';
-    loadTasks(); // 刷新任务
-    loadStats();
-};
-
-//在待办删除转移到完成
-const finishTask = async (id: number) => {
-    await axios.put(`/task/complete/${id}`);
-    loadTasks();
-    loadStats();
-
+    if (text) {
+        await axios.post('/api/task/add', {
+            text,
+            status: false
+        })
+        inputText.value = ''         // 清空输入框
+        loadList()
+        total()
+    }
 }
+
+
 //切换按钮改状态
 const filter = ref<'all' | 'pending' | 'completed'>('pending');
 const toDoTask = () => {
     filter.value = "pending"
-    loadTasks();
-    loadStats();
+    loadList();
+    total()
+
 }
 const completedTask = () => {
     filter.value = "completed"
-    loadTasks();
-    loadStats();
+    loadList();
+    total()
 }
 const AllTask = () => {
     filter.value = "all"
-    loadTasks();
-    loadStats();
+    loadList();
+    total()
 }
-//页面加载
-onMounted(() => {
-    loadTasks();
-    loadStats();
-});
 
-//根据状态切换视图
-const loadTasks = async () => {
-    let url = '/task';
-    if (filter.value === 'pending') url = '/task/pending';
-    if (filter.value === 'completed') url = '/task/completed';
-if (filter.value === 'all') url = '/task/all';
-    const response = await axios.get(url);
-    todoLists.value = response.data;
-};
 
-//统计
-const pendingCount = ref(0);
-const finishCount = ref(0);
-const allCount = ref(0);
-const loadStats = async () => {
-    const res = await axios.get('/task/count');
-    pendingCount.value = res.data.pendingCount;
-    finishCount.value = res.data.finishCount;
-    allCount.value = res.data.allCount;
-};
+//在待办删除转移到完成
+const finishTask = async (id: number) => {
+    const response = await axios.put(`/api/task/complete/${id}`)
+
+    loadList()
+    total()
+
+}
+
 
 //多选完成
 const selectedIds = ref<number[]>([]);
 const multipleFinishTask = async () => {
     if (selectedIds.value.length > 0) {
-        await axios.put('/task/complete/batch', selectedIds.value);
-        selectedIds.value = [];
-        allChecked.value = false;
-        loadTasks();
-        loadStats();
+        const response = await axios.put('api/task/complete/batch', selectedIds.value)
+        loadList()
+        total()
     } else {
         alert("你玩呢f")
     }
@@ -167,8 +189,46 @@ const allCheck = () => {
 </script>
 
 <style>
-body {
+/* 包装器样式 - 负责边框抖动 */
+.jagged-wrapper {
+    position: relative;
+    display: block;
+    border-radius: 12px;
+    overflow: visible;
+    width: 100%;
+}
 
+/* 伪元素创建抖动边框 */
+.jagged-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 12px solid #ffccaa;
+    border-radius: 48px;
+    /* 边框颜色和粗细 */
+    filter: url(#jagged);
+    /* 应用抖动滤镜 */
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* 内容容器样式 - 保持内容不抖动 */
+.your-content {
+    position: relative;
+    z-index: 0;
+    /* 确保内容在边框之上 */
+}
+
+body {
+    background-image:
+        url('/images/cat-paw.png'),
+        url('/images/cat-paw.png');
+    background-size: 80px 80px, 80px 80px;
+    background-position: 0 0, 40px 40px;
+    background-repeat: repeat, repeat;
     background-color: #FFEEE2;
     display: flex;
     justify-content: center;
@@ -178,10 +238,9 @@ body {
 }
 
 .todo-container {
-    width: 440px;
-    padding: 30px 20px;
+    padding: 40px 40px;
     background: #fff8f0;
-    border: 12px solid #ffccaa;
+
     border-radius: 48px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
@@ -278,6 +337,10 @@ footer {
     justify-content: space-between;
     align-items: center;
     margin-top: 30px;
+    flex-wrap: wrap;
+    /* ← 新增 */
+    gap: 10px;
+    /* ← 新增 */
 }
 
 input[type="checkbox"] {
@@ -349,8 +412,10 @@ input[type="checkbox"]:checked::after {
 }
 
 @media screen and (max-width: 600px) {
+   
+
     .todo-container {
-        width: 290px;
+        padding: 30px;
         font-size: 14px;
         margin: 0 auto;
     }
@@ -365,25 +430,44 @@ input[type="checkbox"]:checked::after {
         padding: 8px;
     }
 
-
+    .checkbox {
+        text-align: left;
+        width: 70%;
+    }
 
     footer {
         flex-direction: column;
+        /* 垂直排列 */
+        align-items: center;
+        /* 居中对齐 */
+        gap: 16px;
+        /* 间距更大一点 */
+    }
+
+    .total {
+        text-align: center;
+        /* 统计居中 */
+        width: 100%;
     }
 
     .buttonGroup {
+        padding-bottom: 20px;
+        /* 底部留白 */
         display: flex;
         flex-direction: column;
+        /* 按钮垂直排列 */
+        align-items: center;
+        /* 居中 */
+        gap: 10px;
+        width: 100%;
     }
 
-    .buttonGroup button {
-        margin-top: 6px;
+    .bottomButton {
+        margin-left: 0;
+        /* 去掉左边距 */
+        width: 80%;
+        /* 按钮宽度更适合手机 */
     }
-
-    .todo-input {
-        padding-left: 10px;
-    }
-
 
 
 }
